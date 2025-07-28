@@ -1,291 +1,144 @@
 #!/bin/bash
 
-# Fix 502 Bad Gateway by ensuring application runs on port 3000
+# Fix 502 Bad Gateway - Ensure application and Nginx are properly configured
 set -e
 
-echo "Fixing 502 Bad Gateway error..."
+echo "=== Fixing 502 Bad Gateway Error ==="
 
-APP_DIR="/var/www/cfbc"
-APP_USER="cfbc"
+# Check current application status
+echo "1. Checking application status..."
+pm2 status
 
-cd $APP_DIR
-
-# Kill all existing PM2 processes
-echo "Stopping all PM2 processes..."
-sudo -u $APP_USER pm2 kill 2>/dev/null || true
-
-# Check if the application file exists and fix it
-echo "Checking application files..."
-if [ ! -f "dist/index.js" ]; then
-    echo "Creating application server..."
-    sudo -u $APP_USER mkdir -p dist
-    
-    cat > dist/index.js << 'EOF'
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        message: 'Central Florida Bin Cleaning is running',
-        timestamp: new Date().toISOString(),
-        port: PORT
-    });
-});
-
-// Main route
-app.get('/', (req, res) => {
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Central Florida Bin Cleaning</title>
-    <style>
-        body { 
-            font-family: 'Arial', sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .container { 
-            max-width: 900px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 40px; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        h1 { 
-            color: #2d5016; 
-            text-align: center; 
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-        .status { 
-            background: linear-gradient(45deg, #d4edda, #c3e6cb);
-            border: 2px solid #28a745;
-            border-radius: 8px; 
-            padding: 20px; 
-            margin: 25px 0;
-            text-align: center;
-            font-size: 1.1em;
-        }
-        .accounts { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-            gap: 20px; 
-            margin: 30px 0;
-        }
-        .account { 
-            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
-            border: 2px solid #dee2e6; 
-            border-radius: 10px; 
-            padding: 20px; 
-            text-align: center;
-            transition: transform 0.2s;
-        }
-        .account:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .account h3 {
-            color: #2d5016;
-            margin-top: 0;
-        }
-        .info-section {
-            background: #e3f2fd;
-            border: 2px solid #2196f3;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .next-steps {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .next-steps ol {
-            padding-left: 25px;
-        }
-        .next-steps li {
-            margin: 10px 0;
-            line-height: 1.6;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🗑️ Central Florida Bin Cleaning</h1>
-        <div class="subtitle">Professional Trash Bin Cleaning Service</div>
-        
-        <div class="status">
-            <strong>✅ Application Status: Running Successfully!</strong><br>
-            Your Central Florida Bin Cleaning application is now deployed and operational on Ubuntu 24.04.
-        </div>
-
-        <div class="info-section">
-            <h2>🚀 Deployment Information</h2>
-            <ul>
-                <li><strong>Server:</strong> Ubuntu 24.04 LTS</li>
-                <li><strong>Application:</strong> Central Florida Bin Cleaning Management System</li>
-                <li><strong>Status:</strong> Production Ready</li>
-                <li><strong>Port:</strong> ${PORT}</li>
-                <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
-            </ul>
-        </div>
-
-        <h2>🔐 Default Login Accounts</h2>
-        <p>Use these accounts to access different parts of the system:</p>
-        
-        <div class="accounts">
-            <div class="account">
-                <h3>🔧 Admin Portal</h3>
-                <strong>Username:</strong> admin<br>
-                <strong>Password:</strong> admin123<br>
-                <small>Full system access</small>
-            </div>
-            <div class="account">
-                <h3>👤 Customer Portal</h3>
-                <strong>Username:</strong> customer1<br>
-                <strong>Password:</strong> customer123<br>
-                <small>Service requests & billing</small>
-            </div>
-            <div class="account">
-                <h3>🚛 Driver Portal</h3>
-                <strong>Username:</strong> driver1<br>
-                <strong>Password:</strong> driver123<br>
-                <small>Job assignments & routes</small>
-            </div>
-            <div class="account">
-                <h3>📋 Dispatcher Portal</h3>
-                <strong>Username:</strong> dispatcher1<br>
-                <strong>Password:</strong> dispatcher123<br>
-                <small>Schedule management</small>
-            </div>
-        </div>
-
-        <div class="next-steps">
-            <h2>📋 Next Steps</h2>
-            <ol>
-                <li><strong>Upload Complete Application:</strong> Use the full deployment package to get all portal features</li>
-                <li><strong>Security Update:</strong> Change all default passwords immediately</li>
-                <li><strong>API Configuration:</strong> Add SendGrid, Twilio, and Stripe keys in /var/www/cfbc/.env.production</li>
-                <li><strong>Test Features:</strong> Login to each portal and test functionality</li>
-                <li><strong>Domain Setup:</strong> Configure your custom domain and SSL certificate</li>
-                <li><strong>Backup System:</strong> Verify daily database backups are working</li>
-            </ol>
-        </div>
-
-        <div class="info-section">
-            <h2>🛠️ Management Commands</h2>
-            <code>cd /var/www/cfbc</code><br>
-            <code>./manage.sh start</code> - Start application<br>
-            <code>./manage.sh stop</code> - Stop application<br>
-            <code>./manage.sh restart</code> - Restart application<br>
-            <code>./manage.sh status</code> - Check status<br>
-            <code>./manage.sh logs</code> - View logs
-        </div>
-
-        <div class="footer">
-            Central Florida Bin Cleaning © 2025 | Professional Trash Bin Cleaning Service
-        </div>
-    </div>
-</body>
-</html>
-    `);
-});
-
-// API endpoints
-app.get('/api/status', (req, res) => {
-    res.json({
-        application: 'Central Florida Bin Cleaning',
-        status: 'running',
-        version: '1.0.0',
-        environment: 'production',
-        port: PORT,
-        timestamp: new Date().toISOString()
-    });
-});
-
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'healthy', port: PORT });
-});
-
-// Start server
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Central Florida Bin Cleaning server running on port ${PORT}`);
-    console.log(`Server accessible at: http://localhost:${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully');
-    server.close(() => {
-        console.log('Process terminated');
-    });
-});
-
-process.on('SIGINT', () => {
-    console.log('SIGINT received, shutting down gracefully');
-    server.close(() => {
-        console.log('Process terminated');
-    });
-});
-EOF
-
-    chown $APP_USER:$APP_USER dist/index.js
-fi
-
-# Ensure express is installed
-echo "Installing dependencies..."
-sudo -u $APP_USER npm install express --save 2>/dev/null || true
-
-# Start the application with PM2
-echo "Starting application with PM2..."
-sudo -u $APP_USER pm2 start dist/index.js --name cfbc-app --env production
-
-# Save PM2 configuration
-sudo -u $APP_USER pm2 save
-
-# Wait a moment for startup
-sleep 3
-
-# Test the application
-echo "Testing application..."
-if curl -s http://localhost:3000/health >/dev/null; then
-    echo "✅ Application is running successfully on port 3000!"
-    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
-    echo "🌐 Access your application at: http://$SERVER_IP"
+# Test if application is responding on port 3000
+echo "2. Testing application on port 3000..."
+if curl -s http://localhost:3000 > /dev/null; then
+    echo "✓ Application is responding on port 3000"
 else
-    echo "❌ Application failed to start. Checking logs..."
-    sudo -u $APP_USER pm2 logs cfbc-app --lines 10
+    echo "✗ Application not responding on port 3000 - restarting..."
+    cd /var/www/cfbc-app
+    pm2 restart cfbc-app
+    sleep 3
+    
+    if curl -s http://localhost:3000 > /dev/null; then
+        echo "✓ Application restarted and responding"
+    else
+        echo "✗ Application still not responding - checking logs..."
+        pm2 logs cfbc-app --lines 10
+        exit 1
+    fi
 fi
 
-# Check PM2 status
-echo "PM2 Status:"
-sudo -u $APP_USER pm2 status
+# Fix Nginx configuration
+echo "3. Updating Nginx configuration..."
+cat > /etc/nginx/sites-available/cfbc << 'NGINX_EOF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    # Disable buffering for real-time responses
+    proxy_buffering off;
+    proxy_cache off;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeout settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Handle proxy errors
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+    }
+
+    # Health check endpoint
+    location /health {
+        proxy_pass http://localhost:3000/health;
+        proxy_set_header Host $host;
+        access_log off;
+    }
+
+    # Error pages
+    error_page 502 503 504 /50x.html;
+    location = /50x.html {
+        root /var/www/html;
+        internal;
+    }
+}
+NGINX_EOF
+
+# Test Nginx configuration
+echo "4. Testing Nginx configuration..."
+nginx -t
+
+if [ $? -eq 0 ]; then
+    echo "✓ Nginx configuration is valid"
+    
+    # Reload Nginx
+    echo "5. Reloading Nginx..."
+    systemctl reload nginx
+    
+    # Wait for reload
+    sleep 2
+    
+    # Test the full application
+    echo "6. Testing complete application..."
+    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    
+    if curl -s http://localhost > /dev/null; then
+        echo ""
+        echo "SUCCESS! 502 Error Fixed!"
+        echo ""
+        echo "=== Application Access ==="
+        echo "URL: http://$SERVER_IP"
+        echo "Status: Online and Accessible"
+        echo ""
+        echo "=== Test Your Application ==="
+        echo "1. Visit http://$SERVER_IP in your browser"
+        echo "2. You should see the CFBC login page"
+        echo "3. Login with: admin / admin123"
+        echo "4. Access your management portal"
+        echo ""
+        echo "=== Login Accounts ==="
+        echo "• Admin Portal: admin / admin123"
+        echo "• Customer Portal: customer1 / customer123"
+        echo "• Driver Portal: driver1 / driver123"
+        echo "• Dispatcher Portal: dispatcher1 / dispatcher123"
+        echo ""
+        echo "=== Current Status ==="
+        echo "Application: Running on port 3000"
+        echo "Nginx: Proxy configured and running"
+        echo "PM2 Status:"
+        pm2 status
+        
+    else
+        echo "WARNING: Still getting connection issues"
+        echo "Checking system status..."
+        
+        echo "Nginx status:"
+        systemctl status nginx --no-pager -l
+        
+        echo "Application logs:"
+        pm2 logs cfbc-app --lines 5
+        
+        echo "Port 3000 status:"
+        netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
+    fi
+    
+else
+    echo "✗ Nginx configuration has errors"
+    nginx -t
+    exit 1
+fi
+
+echo ""
+echo "502 fix completed!"
